@@ -2,97 +2,90 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>ARMR Assignment 1 – WebAR Supercar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARMR Assignment 1</title>
+
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
 <style>
-  html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,sans-serif}
-  #hud{position:fixed;top:8px;left:8px;z-index:10;background:#000a;color:#fff;font-size:12px;
-       padding:6px 10px;border-radius:8px;line-height:1.5;pointer-events:none}
-  #hud b{color:#7CFC9A}
-  #help{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:10;background:#000a;color:#fff;
-        font-size:13px;padding:8px 14px;border-radius:20px;text-align:center;max-width:90vw}
-  #help.hide{display:none}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#status {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 999;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 8px;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+}
 </style>
 </head>
+
 <body>
-<div id="hud">
-  Model: <b id="s-model">loading…</b><br>
-  Target: <b id="s-track">searching</b><br>
-  FPS: <b id="s-fps">–</b>
+
+<div id="status">
+  Point camera at target image
 </div>
-<div id="help">Point your camera at <a style="color:#7CFC9A" href="assets/target.png" target="_blank">assets/target.png</a> (on another screen or printed)</div>
 
-<!-- Draco decoder path is required because the .glb uses KHR_draco_mesh_compression -->
-<a-scene mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.001;"
-         gltf-model="dracoDecoderPath: https://www.gstatic.com/draco/versioned/decoders/1.5.6/;"
-         color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true; antialias: false; alpha: true"
-         vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+<a-scene
+  mindar-image="imageTargetSrc: ./assets/targets.mind;"
+  color-space="sRGB"
+  renderer="colorManagement: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
+
   <a-assets>
-    <a-asset-item id="car" src="./models/ARMR_Assign1.glb"></a-asset-item>
+    <a-asset-item
+      id="car"
+      src="./models/ARMR_Assign1.glb">
+    </a-asset-item>
   </a-assets>
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-  <a-light type="ambient" intensity="0.8"></a-light>
-  <a-light type="directional" intensity="1.4" position="1 2 3"></a-light>
 
-  <a-entity id="anchor" mindar-image-target="targetIndex: 0">
-    <!-- Wrapper spins the car like a turntable around the marker's normal (Z) -->
-    <a-entity animation="property: rotation; from: 0 0 0; to: 0 0 360; dur: 24000; easing: linear; loop: true">
-      <!-- Rotate 90° about X so the model's +Y (up) points out of the target plane -->
-      <a-entity rotation="90 0 0">
-        <a-entity id="model" gltf-model="#car"></a-entity>
-      </a-entity>
-    </a-entity>
+  <a-camera
+    position="0 0 0"
+    look-controls="enabled: false">
+  </a-camera>
+
+  <a-light
+    type="ambient"
+    intensity="1">
+  </a-light>
+
+  <a-light
+    type="directional"
+    intensity="1"
+    position="1 2 3">
+  </a-light>
+
+  <a-entity mindar-image-target="targetIndex: 0">
+
+    <!-- DEBUG BOX -->
+    <a-box
+      color="red"
+      position="0 0 0"
+      scale="0.2 0.2 0.2">
+    </a-box>
+
+    <!-- CAR MODEL -->
+    <a-gltf-model
+      src="#car"
+      position="0 0 0"
+      rotation="0 0 0"
+      scale="0.01 0.01 0.01">
+    </a-gltf-model>
+
   </a-entity>
+
 </a-scene>
 
-<script>
-/* ---------- Config ---------- */
-const FOOTPRINT   = 0.9;   // car footprint as a fraction of target width (1 unit)
-const HIDE_EXTRA  = true;  // the .glb contains two copies of the car in its scene; show only the first
-const DROP_TRANSMISSION = true; // KHR_materials_transmission forces an extra render pass (costly on phones)
-
-/* ---------- Status HUD ---------- */
-const $ = id => document.getElementById(id);
-const anchor = $('anchor'), modelEl = $('model');
-anchor.addEventListener('targetFound', () => { $('s-track').textContent = 'TRACKING'; $('help').classList.add('hide'); });
-anchor.addEventListener('targetLost',  () => { $('s-track').textContent = 'lost'; });
-
-let frames = 0, last = performance.now();
-(function loop(t){ frames++; if (t - last >= 1000){ $('s-fps').textContent = Math.round(frames*1000/(t-last)); frames = 0; last = t; }
-  requestAnimationFrame(loop); })(last);
-
-/* ---------- Model post-processing ---------- */
-modelEl.addEventListener('model-error', e => { $('s-model').textContent = 'ERROR (see console)'; console.error(e.detail); });
-modelEl.addEventListener('model-loaded', () => {
-  const THREE = AFRAME.THREE, scene = document.querySelector('a-scene'), root = modelEl.getObject3D('mesh');
-  try {
-    // 1) hide duplicate root(s)
-    if (HIDE_EXTRA && root.children.length > 1) root.children.slice(1).forEach(c => c.visible = false);
-
-    // 2) lightweight studio environment so metallic PBR materials don't render black
-    const pmrem = new THREE.PMREMGenerator(scene.renderer), env = new THREE.Scene();
-    env.add(new THREE.Mesh(new THREE.BoxGeometry(10,10,10), new THREE.MeshBasicMaterial({color:0x555555, side:THREE.BackSide})));
-    [[0,4.9,0,6,0.2,6],[4.9,0,0,0.2,4,4],[-4.9,0,0,0.2,4,4]].forEach(([x,y,z,w,h,d]) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshBasicMaterial({color:0xffffff})); m.position.set(x,y,z);
-      m.material.color.multiplyScalar(6); env.add(m); });
-    scene.object3D.environment = pmrem.fromScene(env, 0.04).texture;
-
-    // 3) material tuning for mobile
-    root.traverse(o => { if (o.isMesh && o.material){ const mats = [].concat(o.material);
-      mats.forEach(m => { if (DROP_TRANSMISSION && m.transmission) m.transmission = 0; m.envMapIntensity = 1; }); } });
-
-    // 4) auto-fit: measure visible model in the entity's local frame, then scale/centre it on the target
-    modelEl.object3D.updateWorldMatrix(true, true);
-    const box = new THREE.Box3().setFromObject(root).applyMatrix4(modelEl.object3D.matrixWorld.clone().invert());
-    const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
-    const s = FOOTPRINT / Math.max(size.x, size.z);
-    modelEl.setAttribute('scale', `${s} ${s} ${s}`);
-    modelEl.setAttribute('position', `${-c.x*s} ${-box.min.y*s} ${-c.z*s}`);
-    $('s-model').textContent = 'ready';
-  } catch (err) { console.error(err); $('s-model').textContent = 'loaded (post-process failed)'; }
-});
-</script>
 </body>
 </html>
