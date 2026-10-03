@@ -36,56 +36,9 @@ html, body {
   Point camera at target image
 </div>
 
-<a-scene
-  mindar-image="imageTargetSrc: ./assets/targets.mind;"
-  color-space="sRGB"
-  renderer="colorManagement: true"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false">
-
-  <a-assets>
-    <a-asset-item
-      id="car"
-      src="./models/ARMR_Assign1.glb">
-    </a-asset-item>
-  </a-assets>
-
-  <a-camera
-    position="0 0 0"
-    look-controls="enabled: false">
-  </a-camera>
-
-  <a-light
-    type="ambient"
-    intensity="1">
-  </a-light>
-
-  <a-light
-    type="directional"
-    intensity="1"
-    position="1 2 3">
-  </a-light>
-
-  <a-entity mindar-image-target="targetIndex: 0">
-
-    <!-- DEBUG BOX -->
-    <a-box
-      color="red"
-      position="0 0 0"
-      scale="0.2 0.2 0.2">
-    </a-box>
-
-    <!-- CAR MODEL -->
-    <a-gltf-model
-      src="#car"
-      position="0 0 0"
-      rotation="0 0 0"
-      scale="0.01 0.01 0.01">
-    </a-gltf-model>
-
-  </a-entity>
-
+<a-scene>
+  <a-box color="blue" position="0 0 -2"></a-box>
+  <a-camera></a-camera>
 </a-scene>
-
 </body>
 </html>
